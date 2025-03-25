@@ -56,11 +56,8 @@ def generate_with_ollama(prompt: str, model: str, temperature: float = 0.7) -> U
 def sanitize_json(text: str) -> Dict[str, str]:
     """Extract and clean JSON content from the model response."""
     logging.info("Raw response from LLM:\n%s", text[:500] + "..." if len(text) > 500 else text)
- 
-    """Split response text into individual JSON blocks."""
-    json_blocks = re.findall(r'```json\n(.*?)\n```', text, re.DOTALL)
 
-    lines = json_blocks[0].splitlines()
+    lines = text.splitlines()
     if lines[0].strip() == "```json" and lines[-1].strip() == "```":
         lines = lines[1:-1]
         cleaned = "\n".join(lines).strip()
