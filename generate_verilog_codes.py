@@ -12,8 +12,9 @@ from typing import Dict, List, Union
 # Load environment variables from .env file
 load_dotenv()
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Configure logging to write to a file
+log_filename = "generate_verilog_codes.log"
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename=log_filename, filemode='a')
 
 # =========================
 # TASK GENERATION PROMPT
@@ -55,8 +56,11 @@ def generate_with_ollama(prompt: str, model: str, temperature: float = 0.7) -> U
 def sanitize_json(text: str) -> Dict[str, str]:
     """Extract and clean JSON content from the model response."""
     logging.info("Raw response from LLM:\n%s", text[:500] + "..." if len(text) > 500 else text)
-    
-    lines = text.splitlines()
+ 
+    """Split response text into individual JSON blocks."""
+    json_blocks = re.findall(r'```json\n(.*?)\n```', text, re.DOTALL)
+
+    lines = json_blocks[0].splitlines()
     if lines[0].strip() == "```json" and lines[-1].strip() == "```":
         lines = lines[1:-1]
         cleaned = "\n".join(lines).strip()
