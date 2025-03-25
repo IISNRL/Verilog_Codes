@@ -25,10 +25,9 @@ PROMPT_TASK = f'''
 # =========================
 # Ollama API Client
 # =========================
-def generate_with_ollama(prompt, temperature=0.7):
+def generate_with_ollama(prompt, model, temperature=0.7):
     """Generate text using Ollama API with specified model."""
     ollama_url = os.getenv("OLLAMA_API_URL")
-    model = os.getenv("LLM_MODEL")
     url = f"{ollama_url}/api/generate"
     
     payload = {
@@ -198,9 +197,9 @@ def save_tasks_to_files(task_dict):
 # =========================
 def generate_programming_tasks(prompt_task):
     """Generate tasks and return saved file paths."""
-    print(f"Generating tasks using Ollama with {os.getenv('LLM_MODEL')} model...")
+    print(f"Generating tasks using Ollama with {os.getenv('LLM_MODEL_TASK')} model...")
     try:
-        response_text = generate_with_ollama(prompt_task)
+        response_text = generate_with_ollama(prompt_task, os.getenv('LLM_MODEL_TASK'))
         if not response_text:
             raise ValueError("Empty response from Ollama")
             
@@ -225,7 +224,7 @@ def generate_report_for_task(task_file_path):
     prompt_code = prompt_code_template.format(task_content=task_content)
 
     try:
-        response_text = generate_with_ollama(prompt_code)
+        response_text = generate_with_ollama(prompt_code, os.getenv('LLM_MODEL_SOLUTION'))
         if not response_text:
             raise ValueError("Empty response from Ollama")
         return response_text
