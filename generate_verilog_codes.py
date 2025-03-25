@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 import requests
@@ -12,15 +13,7 @@ load_dotenv()
 # =========================
 # TASK GENERATION PROMPT
 # =========================
-PROMPT_TASK = f'''
-**Context & Goal**:
-
-{os.getenv("PROMPT_TASK_CONTEXT")}
-
-**Requirements**:
-
-{os.getenv("PROMPT_TASK_REQUIREMENTS")}
-'''
+PROMPT_TASK = os.getenv("PROMPT_TASK")
 
 # =========================
 # Ollama API Client
@@ -54,22 +47,15 @@ def sanitize_json(text):
     """Extract and clean JSON content from the model response."""
     print("Raw response from LLM:\n", text[:500] + "..." if len(text) > 500 else text)
     
-    # Find JSON content between triple backticks if present
-    import re
-    json_pattern = r'```(?:json)?\s*([\s\S]*?)```'
-    json_matches = re.findall(json_pattern, text)
-    
-    if json_matches:
-        cleaned = json_matches[0].strip()
+    # Check for leading and trailing lines with "```json"
+    lines = text.splitlines()
+    if lines[0].strip() == "```json" and lines[-1].strip() == "```":
+        lines = lines[1:-1]
+        cleaned = "\n".join(lines).strip()
     else:
-        # Try to find JSON-like content with curly braces
-        brace_start = text.find('{')
-        brace_end = text.rfind('}')
-        if brace_start != -1 and brace_end != -1 and brace_end > brace_start:
-            cleaned = text[brace_start:brace_end+1].strip()
-        else:
-            cleaned = text.strip()
-    
+        cleaned = text.strip()
+    print("Cleaned response:\n", cleaned)#cleaned[:500] + "..." if len(cleaned) > 500 else cleaned)
+    print("==")
     try:
         parsed_json = json.loads(cleaned)
         print(f"JSON structure type: {type(parsed_json)}")
@@ -78,27 +64,13 @@ def sanitize_json(text):
         
         # Handle different JSON structures
         if isinstance(parsed_json, dict):
-            # If there's a "tasks" key with a list, process it specially
-            if "tasks" in parsed_json and isinstance(parsed_json["tasks"], list):
-                for i, task in enumerate(parsed_json["tasks"]):
-                    task_id = str(i + 1)
-                    # If the task is a dict with numeric keys, use those directly
-                    if isinstance(task, dict) and any(key.isdigit() for key in task.keys()):
-                        for key, value in task.items():
-                            if key.isdigit():
-                                result_dict[key] = value
-                    else:
-                        # Otherwise just use the task as is with a numeric key
-                        result_dict[task_id] = task
-            
             # If there are top-level numeric keys, use those
-            elif any(key.isdigit() for key in parsed_json.keys()):
+            if any(key.isdigit() for key in parsed_json.keys()):
                 for key, value in parsed_json.items():
                     if key.isdigit():
                         result_dict[key] = value
-            
-            # Otherwise, treat each key-value pair as a task
             else:
+                # Otherwise, treat each key-value pair as a task
                 for i, (key, value) in enumerate(parsed_json.items()):
                     result_dict[str(i + 1)] = f"# {key}\n\n{value}"
         
